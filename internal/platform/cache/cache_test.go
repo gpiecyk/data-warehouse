@@ -29,28 +29,42 @@ func TestCacheMiss(t *testing.T) {
 	cache := getClient(t)
 	ctx := context.Background()
 
-	var destination interface{} // to moze byc inny typ
-	if err := cache.Get(ctx, "doesnotexist", destination); err != ErrCacheMiss {
+	if err := cache.Get(ctx, "doesnotexist", nil); err != ErrCacheMiss {
 		t.Errorf("got %v; want ErrCacheMiss", err)
 	}
 }
 
-// func TestSetGetDelete(t *testing.T) {
-// 	cache := getClient(t)
-// 	ctx := context.Background()
+func TestSetGetDelete(t *testing.T) {
+	testCases := []struct {
+		key   string
+		value string
+	}{
+		{"keytest-1", "valuetest1"},
+		{"keytest-2", "valuetest2"},
+		{"keytest-3", "valuetest3"},
+	}
 
-// 	key := "testKey123456789"
-// 	value := "value"
+	cache := getClient(t)
+	ctx := context.Background()
 
-// 	item := &Item{Key: key, Value: value}
-// 	if err := cache.Set(ctx, item); err != nil {
-// 		t.Fatalf("Set: %v", err)
-// 	}
+	for _, test := range testCases {
+		t.Run("Set Get Delete", func(t *testing.T) {
+			item := &Item{Key: test.key, Value: test.value}
+			if err := cache.Set(ctx, item); err != nil {
+				t.Fatalf("Set: %v", err)
+			}
 
-// 	// jest jakis clean up po testach, zeby smieci nie bylo w cache?
+			var value string
+			if err := cache.Get(ctx, test.key, &value); err != nil {
+				t.Fatalf("Error: %v", err)
+			}
+			if value != test.value {
+				t.Errorf("Get: got %q, want %q", value, test.value)
+			}
 
-// 	var newValue string
-// 	if err := cache.Get(ctx, key, &newValue); err == ErrCacheMiss {
-// 		t.Errorf("Get: got %v, want value for key: %v", err, key)
-// 	}
-// }
+			if err := cache.Delete(ctx, test.key); err != nil {
+				t.Fatalf("Delete: %v", err)
+			}
+		})
+	}
+}
