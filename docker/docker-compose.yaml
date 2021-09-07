@@ -1,0 +1,51 @@
+services:
+
+  database:
+    image: postgres
+    container_name: database
+    restart: always
+    ports: 
+      - 5432:5432
+    environment: 
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+      POSTGRES_DB: warehouse
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4:2021-08-09-1
+    container_name: pgadmin
+    restart: on-failure
+    ports:
+      - 80:80
+    environment: 
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    networks:
+      - backend
+  
+  redis:
+    image: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    container_name: cache
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - backend
+
+volumes:
+  postgres:
+  pgadmin:
+  redis:
+
+networks:
+  backend:
