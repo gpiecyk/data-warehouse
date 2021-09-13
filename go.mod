@@ -7,8 +7,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgx/v4 v4.13.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	gorm.io/driver/postgres v1.1.0
-	gorm.io/gorm v1.21.14
+	gorm.io/driver/postgres v1.1.1
+	gorm.io/gorm v1.21.15
 )
 
 require (
