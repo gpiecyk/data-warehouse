@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/gpiecyk/data-warehouse/internal/platform/cache"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -16,6 +17,7 @@ type User struct {
 	LastName  string `json:"lastName,omitempty"`
 	Mobile    string `json:"mobile,omitempty"`
 	Email     string `json:"email,omitempty"`
+	Password  string `json:"password,omitempty"`
 }
 
 // wrzucic do pliku service.go, poniewaz w service nie powinienem odnosić się do bazy danych (gorm)
@@ -29,7 +31,13 @@ type UserService struct {
 // users.go (this file) -> business logic (maybe add that stuff into service.go)
 // repository.go -> dao
 func (service *UserService) CreateUser(ctx context.Context, user *User) (*User, error) {
-	err := service.repository.Create(ctx, user)
+	hashedPassword, err := HashPassword(user.Password)
+	if err != nil {
+		return nil, err
+	}
+	user.Password = hashedPassword
+
+	err = service.repository.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +110,16 @@ func (service *UserService) FindUsersWithLimit(ctx context.Context, limit int) (
 
 func generateUserKey(id int) string {
 	return fmt.Sprintf("user:id:%v", id)
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
 func NewService(db *gorm.DB, cache *cache.Client) (*UserService, error) {
