@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/mux"
 	"github.com/gpiecyk/data-warehouse/internal/api"
 )
@@ -33,6 +35,21 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
+}
+
+func (h *Handlers) routes(graphQL *handler.Server) *mux.Router {
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/-/health", h.Health)
+	router.HandleFunc("/users", h.CreateUser).Methods("POST")
+	router.HandleFunc("/users/{id:[0-9]+}", h.UpdateUser).Methods("PUT")
+	router.HandleFunc("/users/{id:[0-9]+}", h.DeleteUser).Methods("DELETE")
+	router.HandleFunc("/users/{id:[0-9]+}", h.GetUserById).Methods("GET")
+	router.HandleFunc("/users", h.FindUsers).Methods("GET").Queries("limit", "{limit:[0-9]+}")
+
+	// graphQL
+	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	router.Handle("/query", graphQL)
+	return router
 }
 
 type HTTP struct {
@@ -64,7 +81,6 @@ func (http *HTTP) gracefullyShutdownServerWithTimeout() {
 	os.Exit(0)
 }
 
-// Config holds all the configuration required to start the HTTP server
 type Config struct {
 	Host         string
 	Port         string
@@ -72,25 +88,14 @@ type Config struct {
 	WriteTimeout time.Duration
 }
 
-func NewService(config *Config, api *api.API) (*HTTP, error) { // add router as a parameter? Put it in config or something?
+func NewService(config *Config, api *api.API, graphQL *handler.Server) (*HTTP, error) {
 	handler := Handlers{
 		api: api,
 	}
-
-	// wydzielic do nowej metody
-	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		fmt.Fprintf(writer, "Welcome to the HomePage! Update :)")
-	})
-	router.HandleFunc("/-/health", handler.Health)
-	router.HandleFunc("/users", handler.CreateUser).Methods("POST")
-	router.HandleFunc("/users/{id:[0-9]+}", handler.UpdateUser).Methods("PUT")
-	router.HandleFunc("/users/{id:[0-9]+}", handler.DeleteUser).Methods("DELETE")
-	router.HandleFunc("/users/{id:[0-9]+}", handler.GetUserById).Methods("GET")
-	router.HandleFunc("/users", handler.FindUsers).Methods("GET").Queries("limit", "{limit:[0-9]+}")
+	router := handler.routes(graphQL)
 
 	httpServer := &http.Server{
-		Addr:              fmt.Sprintf("%s:%s", config.Host, config.Port), // debug this -> host is empty?
+		Addr:              fmt.Sprintf("%s:%s", config.Host, config.Port),
 		Handler:           router,
 		ReadTimeout:       config.ReadTimeout,
 		ReadHeaderTimeout: config.ReadTimeout,

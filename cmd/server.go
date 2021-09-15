@@ -51,7 +51,10 @@ func main() {
 	httpConfig, err := config.HTTP()
 	logErrorIfPresent(err)
 
-	httpServer, err := http.NewService(httpConfig, api)
+	graphQL, err := config.GraphQLConfig(userService)
+	logErrorIfPresent(err)
+
+	httpServer, err := http.NewService(httpConfig, api, graphQL)
 	logErrorIfPresent(err)
 
 	httpServer.Start()

@@ -4,9 +4,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/gpiecyk/data-warehouse/graph"
+	"github.com/gpiecyk/data-warehouse/graph/generated"
 	"github.com/gpiecyk/data-warehouse/internal/platform/cache"
 	"github.com/gpiecyk/data-warehouse/internal/platform/database"
 	"github.com/gpiecyk/data-warehouse/internal/server/http"
+	"github.com/gpiecyk/data-warehouse/internal/users"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,6 +44,7 @@ type Configs struct {
 
 func (configs *Configs) HTTP() (*http.Config, error) {
 	return &http.Config{
+		Host:         configs.Server.Host,
 		Port:         configs.Server.Port,
 		ReadTimeout:  time.Duration(configs.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(configs.Server.WriteTimeout) * time.Second,
@@ -67,6 +73,18 @@ func (configs *Configs) CacheConfig() (*cache.Config, error) {
 		WriteTimeout: time.Duration(configs.Cache.WriteTimeout) * time.Second,
 		DialTimeout:  time.Duration(configs.Cache.DialTimeout) * time.Second,
 	}, nil
+}
+
+func (configs *Configs) GraphQLConfig(service *users.UserService) (*handler.Server, error) {
+	graphQL := handler.NewDefaultServer(
+		generated.NewExecutableSchema(
+			generated.Config{
+				Resolvers: &graph.Resolver{
+					UserService: service,
+				},
+			}))
+	graphQL.Use(extension.FixedComplexityLimit(100))
+	return graphQL, nil
 }
 
 func NewService(configPath string) (*Configs, error) {
