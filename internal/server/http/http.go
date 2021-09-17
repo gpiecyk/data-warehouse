@@ -14,6 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/mux"
 	"github.com/gpiecyk/data-warehouse/internal/api"
+	"github.com/gpiecyk/data-warehouse/internal/auth"
 )
 
 const gracefulTimeout time.Duration = time.Second * 15
@@ -39,6 +40,8 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) routes(graphQL *handler.Server) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
+	router.Use(auth.Middleware(h.api))
+
 	router.HandleFunc("/-/health", h.Health)
 	router.HandleFunc("/users", h.CreateUser).Methods("POST")
 	router.HandleFunc("/users/{id:[0-9]+}", h.UpdateUser).Methods("PUT")

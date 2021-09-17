@@ -6,12 +6,21 @@ import (
 	"time"
 )
 
+type Login struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type NewUser struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Mobile    string `json:"mobile"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
+}
+
+type RefreshTokenInput struct {
+	Token string `json:"token"`
 }
 
 type User struct {

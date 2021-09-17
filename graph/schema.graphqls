@@ -1,7 +1,3 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
 scalar Time
 
 type User {
@@ -29,6 +25,17 @@ input NewUser {
   password: String!
 }
 
+input Login {
+    email: String!
+    password: String!
+}
+
+input RefreshTokenInput {
+    token: String!
+}
+
 type Mutation {
   createUser(input: NewUser!): User!
+  login(input: Login!): String!
+  refreshToken(input: RefreshTokenInput!): String!
 }

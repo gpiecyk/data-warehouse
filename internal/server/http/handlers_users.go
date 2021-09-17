@@ -51,11 +51,7 @@ func (handler *Handlers) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	updatedUser, err := handler.api.UpdateUser(r.Context(), user, id)
 	if err != nil {
-		if recordNotFound, ok := err.(*users.ErrRecordNotFound); ok {
-			http.Error(w, recordNotFound.Error(), recordNotFound.StatusCode)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -97,11 +93,7 @@ func (handler *Handlers) GetUserById(w http.ResponseWriter, r *http.Request) {
 
 	user, err := handler.api.GetUserById(r.Context(), id)
 	if err != nil {
-		if recordNotFound, ok := err.(*users.ErrRecordNotFound); ok {
-			http.Error(w, recordNotFound.Error(), recordNotFound.StatusCode)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 

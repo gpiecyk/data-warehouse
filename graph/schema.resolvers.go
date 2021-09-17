@@ -5,9 +5,11 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gpiecyk/data-warehouse/graph/generated"
 	"github.com/gpiecyk/data-warehouse/graph/model"
+	"github.com/gpiecyk/data-warehouse/internal/auth"
 	"github.com/gpiecyk/data-warehouse/internal/users"
 )
 
@@ -38,7 +40,37 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	}, nil
 }
 
+func (r *mutationResolver) Login(ctx context.Context, input model.Login) (string, error) {
+	id, err := r.UserService.Authenticate(ctx, input.Email, input.Password)
+	if err != nil {
+		return "", err
+	}
+
+	token, err := auth.GenerateToken(id)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+func (r *mutationResolver) RefreshToken(ctx context.Context, input model.RefreshTokenInput) (string, error) {
+	id, err := auth.ParseToken(input.Token)
+	if err != nil {
+		return "", fmt.Errorf("access denied")
+	}
+
+	token, err := auth.GenerateToken(id)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
 func (r *queryResolver) User(ctx context.Context, id int) (*model.User, error) {
+	if user := auth.GetUserFromContext(ctx); user == nil {
+		return &model.User{}, fmt.Errorf("access denied")
+	}
+
 	user, err := r.UserService.GetUserById(ctx, id)
 	if err != nil {
 		return nil, err
@@ -58,6 +90,10 @@ func (r *queryResolver) User(ctx context.Context, id int) (*model.User, error) {
 }
 
 func (r *queryResolver) Users(ctx context.Context, limit *int) ([]*model.User, error) {
+	if user := auth.GetUserFromContext(ctx); user == nil {
+		return nil, fmt.Errorf("access denied")
+	}
+
 	users, err := r.UserService.FindUsersWithLimit(ctx, *limit)
 	if err != nil {
 		return nil, err

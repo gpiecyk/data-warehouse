@@ -59,7 +59,7 @@ func (service *UserService) UpdateUser(ctx context.Context, user *User, id int) 
 
 	// delete is an idempotent operation - always a safe action
 	// it does not impair consistency
-	cacheErr := service.cache.Delete(ctx, generateUserKey(id))
+	cacheErr := service.cache.Delete(ctx, generateUserKeyWithId(id))
 	if cacheErr != nil {
 		log.Println(cacheErr)
 	}
@@ -68,7 +68,7 @@ func (service *UserService) UpdateUser(ctx context.Context, user *User, id int) 
 
 func (service *UserService) DeleteUser(ctx context.Context, id int) error {
 	dbErr := service.repository.Delete(ctx, id)
-	if err := service.cache.Delete(ctx, generateUserKey(id)); err != nil {
+	if err := service.cache.Delete(ctx, generateUserKeyWithId(id)); err != nil {
 		log.Println(err)
 	}
 	return dbErr
@@ -76,7 +76,7 @@ func (service *UserService) DeleteUser(ctx context.Context, id int) error {
 
 func (service *UserService) GetUserById(ctx context.Context, id int) (*User, error) {
 	user := new(User)
-	key := generateUserKey(id)
+	key := generateUserKeyWithId(id)
 	if err := service.cache.Get(ctx, key, &user); err != nil {
 		log.Println(err, "| method: GetUserById | id:", id)
 	} else {
@@ -85,16 +85,12 @@ func (service *UserService) GetUserById(ctx context.Context, id int) (*User, err
 
 	user, err := service.repository.GetById(ctx, id)
 	if err != nil {
-		return nil, &ErrRecordNotFound{
-			Message:    fmt.Sprintf("user with id \"%v\" does not exist", id),
-			StatusCode: 404, // wrong! not here! this should be in the http handler
-			Err:        err,
-		}
+		return nil, err
 	}
 
 	cacheItem := &cache.Item{Key: key, Value: user}
 	if err := service.cache.Set(ctx, cacheItem); err != nil {
-		log.Printf("ERROR cache set error: %v", err)
+		log.Printf("cache set error: %v", err)
 	}
 
 	return user, nil
@@ -108,7 +104,19 @@ func (service *UserService) FindUsersWithLimit(ctx context.Context, limit int) (
 	return users, nil
 }
 
-func generateUserKey(id int) string {
+// Authenticate returns user's id if provided password and existing password match
+func (service *UserService) Authenticate(ctx context.Context, email, password string) (int, error) {
+	user, err := service.repository.GetByEmail(ctx, email)
+	if err != nil {
+		log.Println("authentication failed, error", err)
+		return -1, err
+	}
+
+	passwordsMatchErr := CompareHashedPasswordWithPlainTextPassword(user.Password, password)
+	return int(user.ID), passwordsMatchErr
+}
+
+func generateUserKeyWithId(id int) string {
 	return fmt.Sprintf("user:id:%v", id)
 }
 
@@ -117,9 +125,8 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
+func CompareHashedPasswordWithPlainTextPassword(hashedPassword, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
 func NewService(db *gorm.DB, cache *cache.Client) (*UserService, error) {
