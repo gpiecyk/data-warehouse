@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/mail"
 
 	"github.com/gpiecyk/data-warehouse/internal/platform/cache"
 	"golang.org/x/crypto/bcrypt"
@@ -16,21 +17,35 @@ type User struct {
 	FirstName string `json:"firstName,omitempty"`
 	LastName  string `json:"lastName,omitempty"`
 	Mobile    string `json:"mobile,omitempty"`
-	Email     string `json:"email,omitempty"`
-	Password  string `json:"password,omitempty"`
+	Email     string `json:"email,omitempty" gorm:"not null;uniqueIndex:idx_email"`
+	Password  string `json:"password,omitempty" gorm:"not null"`
 }
 
-// wrzucic do pliku service.go, poniewaz w service nie powinienem odnosić się do bazy danych (gorm)
+func (user *User) Validate() error {
+	if user.Password == "" {
+		return errors.New("user: no password")
+	}
+	if err := user.ValidateEmail(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (user *User) ValidateEmail() error {
+	_, err := mail.ParseAddress(user.Email)
+	return err
+}
+
 type UserService struct {
 	repository repository
 	cache      *cache.Client
 }
 
-// handler_users.go -> api user handler - first contact
-// api.users -> api + service (calls business logic in users.go)
-// users.go (this file) -> business logic (maybe add that stuff into service.go)
-// repository.go -> dao
 func (service *UserService) CreateUser(ctx context.Context, user *User) (*User, error) {
+	if err := user.Validate(); err != nil {
+		return nil, err
+	}
+
 	hashedPassword, err := HashPassword(user.Password)
 	if err != nil {
 		return nil, err
