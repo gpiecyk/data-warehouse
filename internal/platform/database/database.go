@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gpiecyk/data-warehouse/internal/marketing/campaigns"
+	"github.com/gpiecyk/data-warehouse/internal/marketing/datasources"
+	"github.com/gpiecyk/data-warehouse/internal/marketing/files"
+	"github.com/gpiecyk/data-warehouse/internal/marketing/metrics"
 	"github.com/gpiecyk/data-warehouse/internal/users"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -37,7 +41,12 @@ func NewService(config *Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&users.User{})
+	db.AutoMigrate(
+		&users.User{},
+		&datasources.Datasource{},
+		&campaigns.Campaign{},
+		&files.File{},
+		&metrics.Metric{})
 
 	sqlDB, err := db.DB()
 	if err != nil {
