@@ -6,10 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserDao
-// jeśli mam wiele encji w users to powinieniem stworzyć folder "repository" i w nim umieścić user.go, address.go, etc.
-
-type repository interface { // zmienic nazwe, bo gryzie sie z userRepository!!!!!!!!!! Moze datastore?
+type repository interface {
 	Create(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User, id int) error
 	Delete(ctx context.Context, id int) error

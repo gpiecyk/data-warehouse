@@ -9,8 +9,6 @@ import (
 	"github.com/gpiecyk/data-warehouse/internal/api"
 )
 
-// strings_test.go is a good example
-
 func TestHandlers_Health(t *testing.T) {
 	request := httptest.NewRequest("GET", "/health", nil)
 	writer := httptest.NewRecorder()
